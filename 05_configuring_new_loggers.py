@@ -10,7 +10,7 @@ import sys
 logger_name = __name__ # recommended to use module name
 log_level = logging.INFO
 log_format = '%(levelname)8s :: (%(module)s) %(message)s'
-log_stream = sys.stderr
+log_stream = sys.stderr # default
 
 # Initialize
 formatter = logging.Formatter(log_format)
