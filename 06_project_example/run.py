@@ -1,46 +1,52 @@
-#!/usr/bin/env python3
-
-################################################################################
-# Code
-################################################################################
-# Import project's custom logger module and create top level logger
 import logger
+log = logger.get_logger(__name__)
 
-## Configuration
-log_lvl = 'warning'
+import argparse
+import sys
+import os
+import subprocess
 
-# Format options
-# stdout/stderr logs should give you just enough info to show what the code is doing and if something went wrong
-#log_fmt ='%(levelname)8s :: %(message)s' 
-log_fmt ='%(levelname)8s :: (%(filename)s) %(message)s' 
-#log_fmt ='%(levelname)8s :: [%(asctime)s] (%(filename)s) %(message)s' 
+import module as mod
+import subpackage.submodule as submod
 
-# log files should have all the info needed to track down bugs and compare outputs between runs
-# I prefer log files to be identical run to run if nothing changes (e.g. no timestamps or randomness).
-# That way diff'ing log files helps highlight when something subtle changes
-file_fmt = ("%(levelname)8s :: (%(module)s - %(funcName)s()) %(message)s")
-#file_fmt = ("%(levelname)8s :: (%(module)s:%(funcName)s():L%(lineno)d) %(message)s")
 
-# Get Logger (must be done before importing other modules)
-log = logger.get_top_level_logger( __name__, log_lvl, log_fmt,
-        # Optional
-        output_file='my_output.log',
-        file_lvl = 'info',
-        file_fmt = file_fmt,
-        )
-
-# Import modules that may have their own logger
-import log_msg_module
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-l', '--log-level') # log_level
+    args = parser.parse_args()
+    return args
 
 def main():
-    log.info('Running Main')
-    
-    log.info("Info message")
-    log.debug("Debug message")
-    
-    log_msg_module.do_something()
-    
-    log.info("Done")
+    log.info('='*40)
+    for line in logger.log_summary_str(log).split('\n'):
+        log.info(line)
+    log.info('Info message')
+    log.warning('Warning message')
+    print('sys.stdout message')
+    print('sys.stderr message', file=sys.stderr)
+    subprocess.run('echo Unix stdout message'.split())
+    #subprocess.run('echo "Unix stderr message" >&2'.split())
+    os.system('echo "Unix stderr message" >&2')
+    log.info('\r'+' '*80)
+    log.info('='*40)
 
-if __name__ == "__main__":
+    for line in logger.log_summary_str(mod.log).split('\n'):
+        log.info(line)
+    mod.print_messages()
+    log.info('\r'+' '*80)
+    log.info('='*40)
+    
+    for line in logger.log_summary_str(submod.log).split('\n'):
+        log.info(line)
+    submod.print_messages()
+    log.info('\r'+' '*80)
+    log.info('='*40)
+    
+    raise ValueError('Exception raised')
+    log.info('='*40)
+
+if __name__ == '__main__':
+    args = get_args()
+    if args.log_level:
+        log.setLevel(args.log_level.upper())
     main()
