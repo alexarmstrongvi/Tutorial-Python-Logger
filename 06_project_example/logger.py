@@ -35,7 +35,6 @@ def get_logger(name, lvl=None):
     return log
 
 def capture_python_stdout(root_log):
-    # Source: https://stackoverflow.com/questions/19425736/how-to-redirect-stdout-and-stderr-to-logger-in-python
     def handle_exception(typ, val, tb):
         # Sources:
         # https://stackoverflow.com/questions/6234405/logging-uncaught-exceptions-in-python
@@ -57,6 +56,7 @@ def capture_python_stdout(root_log):
 
     sys.excepthook = handle_exception
 
+    # Source: https://stackoverflow.com/questions/19425736/how-to-redirect-stdout-and-stderr-to-logger-in-python
     sys.stdout = LoggerWriter(root_log.info)
     sys.stderr = LoggerWriter(root_log.warning) # root_log.error?
 
