@@ -24,9 +24,12 @@ def main():
     log.warning('Warning message')
     print('sys.stdout message')
     print('sys.stderr message', file=sys.stderr)
+
+    # Currently not sure if system messages (i.e. fd 1 & 2) can be captured
     subprocess.run('echo Unix stdout message'.split())
-    #subprocess.run('echo "Unix stderr message" >&2'.split())
+    #subprocess.run('echo "Unix stderr message" >&2'.split()) # Doesn't work
     os.system('echo "Unix stderr message" >&2')
+
     log.info('\r'+' '*80)
     log.info('='*40)
 
@@ -35,14 +38,14 @@ def main():
     mod.print_messages()
     log.info('\r'+' '*80)
     log.info('='*40)
-    
+
     for line in logger.log_summary_str(submod.log).split('\n'):
         log.info(line)
     submod.print_messages()
     log.info('\r'+' '*80)
     log.info('='*40)
-    
-    raise ValueError('Exception raised')
+
+    raise RuntimeError('Test unhandled exception')
     log.info('='*40)
 
 if __name__ == '__main__':

@@ -1,13 +1,14 @@
 import logging
+from traceback import TracebackException
 import sys
 
 ROOT_CONFIGURED = False
 
 # Format options
-#LOG_FMT_DEFAULT ='%(levelname)8s :: %(message)s' 
-LOG_FMT_DEFAULT ='%(levelname)8s :: %(module)10s :: %(message)s' 
-#LOG_FMT_DEFAULT = '%(levelname)8s :: (%(filename)s) %(message)s' 
-#LOG_FMT_DEFAULT ='%(levelname)8s :: [%(asctime)s] (%(filename)s) %(message)s' 
+#LOG_FMT_DEFAULT ='%(levelname)8s :: %(message)s'
+LOG_FMT_DEFAULT ='%(levelname)8s :: %(module)10s :: %(message)s'
+#LOG_FMT_DEFAULT = '%(levelname)8s :: (%(filename)s) %(message)s'
+#LOG_FMT_DEFAULT ='%(levelname)8s :: [%(asctime)s] (%(filename)s) %(message)s'
 #LOG_FMT_DEFAULT = "%(levelname)8s :: (%(module)s - %(funcName)s()) %(message)s"
 #LOG_FMT_DEFAULT = "%(levelname)8s :: (%(module)s:%(funcName)s():L%(lineno)d) %(message)s"
 
@@ -28,15 +29,37 @@ def get_logger(name, lvl=None):
         )
         log = logging.getLogger()
         ROOT_CONFIGURED = True
-        
+
         capture_python_stdout(log)
 
     return log
 
 def capture_python_stdout(root_log):
     # Source: https://stackoverflow.com/questions/19425736/how-to-redirect-stdout-and-stderr-to-logger-in-python
+    def handle_exception(typ, val, tb):
+        # Sources:
+        # https://stackoverflow.com/questions/6234405/logging-uncaught-exceptions-in-python
+        # https://stackoverflow.com/questions/8050775/using-pythons-logging-module-to-log-all-exceptions-and-errors
+        if issubclass(typ, KeyboardInterrupt):
+            # Don't capture keyboard interrupt
+            sys.__excepthook__(typ, val, tb)
+            return
+        nonlocal root_log
+
+        # Option 1 - trace in one log error message
+        #root_log.exception("Uncaught exception", exc_info=(typ, val, tb))
+
+        # Option 2 - trace split into one log error message per newline
+        root_log.error("Uncaught exception")#, exc_info=(typ, val, tb))
+        for lines in TracebackException(typ, val, tb).format():
+            for line in lines.splitlines():
+                root_log.error(line)
+
+    sys.excepthook = handle_exception
+
     sys.stdout = LoggerWriter(root_log.info)
-    sys.stderr = LoggerWriter(root_log.error)
+    sys.stderr = LoggerWriter(root_log.warning) # root_log.error?
+
 
 class LoggerWriter(object):
     def __init__(self, writer):
@@ -61,11 +84,11 @@ def log_multiline(log_call, txt):
         log_call(line)
 
 def log_summary_str(log):
-    
+
     log_lvl = log.level
     eff_lvl = log.getEffectiveLevel()
     min_lvl = min([lvl for lvl  in range(logging.CRITICAL) if log.isEnabledFor(lvl)])
-    
+
     s  = f'Log Summary - {log.name}'
     s += f'\n - Levels   : Effective = {eff_lvl}; Logger = {log_lvl}; Enabled for >={min_lvl}'
     s += f'\n - Flags    : Disabled = {log.disabled}'
@@ -82,7 +105,7 @@ def log_summary_str(log):
 def capture_unix_fd():
     return
     # Currently doesn't work
-    # Also risk of infinite pipe loop as python stdout gets redirected back 
+    # Also risk of infinite pipe loop as python stdout gets redirected back
     # to logger that prints it to stdour
     # Source: https://stackoverflow.com/questions/616645/how-to-duplicate-sys-stdout-to-a-log-file
     import subprocess, os, sys
@@ -98,7 +121,7 @@ def capture_unix_fd():
     print("\nstdout", flush=True)
     print("stderr", file=sys.stderr, flush=True)
 
-    # These child processes' stdin/stdout are 
+    # These child processes' stdin/stdout are
     os.spawnve("P_WAIT", "/bin/ls", ["/bin/ls"], {})
     os.execve("/bin/ls", ["/bin/ls"], os.environ)
 
